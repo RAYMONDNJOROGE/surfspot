@@ -6,6 +6,7 @@ import secrets
 import string
 import requests
 import mysql.connector
+import routeros_api
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import Flask, jsonify, request, render_template
@@ -28,7 +29,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 # Configure logging to a file or stdout
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s - %(funcName)s')
 
 
 # --- Real Helper Functions (You MUST implement these) ---
@@ -38,33 +39,27 @@ def get_mikrotik_connection():
     """
     Establishes a connection to the MikroTik router and returns an API object.
     You must implement this function with your specific router details.
-
-    Example using the `routeros_api` library:
-    import routeros_api
-
+    """
     try:
         connection = routeros_api.RouterOsApiPool(
             os.getenv('MIKROTIK_HOST'),
             username=os.getenv('MIKROTIK_USER'),
             password=os.getenv('MIKROTIK_PASSWORD'),
-            port=8728, # or 8729 for SSL
+            port=int(os.getenv('MIKROTIK_PORT', 8728)),
             plaintext_login=True
         )
+        logging.info("Successfully connected to MikroTik.")
         return connection
     except Exception as e:
         logging.error(f"Failed to connect to MikroTik: {e}")
         return None
-    """
-    logging.error("MikroTik connection function is not implemented.")
-    return None
 
 
 def get_db_connection():
     """
     Establishes a connection to the MySQL database.
     You must implement this function with your specific database credentials.
-
-    Example using the `mysql.connector` library:
+    """
     try:
         conn = mysql.connector.connect(
             host=os.getenv('DB_HOST'),
@@ -72,32 +67,97 @@ def get_db_connection():
             password=os.getenv('DB_PASSWORD'),
             database=os.getenv('DB_NAME')
         )
+        logging.info("Successfully connected to the database.")
         return conn
     except Exception as e:
         logging.error(f"Failed to connect to database: {e}")
         return None
-    """
-    logging.error("Database connection function is not implemented.")
-    return None
 
 
 def get_mac_from_ip(ip_address):
     """
     Retrieves the MAC address associated with a given IP address from the
     MikroTik router's ARP table.
-    You must implement this function.
     """
-    logging.error("get_mac_from_ip function is not implemented.")
-    return None
+    api_pool = get_mikrotik_connection()
+    if not api_pool:
+        return None
+
+    try:
+        api = api_pool.get_api()
+        # Find the MAC address by looking up the IP address in the ARP table
+        arp_entry = api.get_resource('/ip/arp').get(address=ip_address)
+        if arp_entry:
+            mac_address = arp_entry[0].get('mac-address')
+            logging.info(f"Found MAC '{mac_address}' for IP '{ip_address}'.")
+            return mac_address
+        else:
+            logging.warning(f"No ARP entry found for IP '{ip_address}'.")
+            return None
+    except Exception as e:
+        logging.error(f"Error getting MAC from IP: {e}")
+        return None
+    finally:
+        if api_pool:
+            api_pool.disconnect()
 
 
 def get_mpesa_access_token():
     """
     Requests a new M-Pesa OAuth 2.0 access token.
-    You must implement this function using your M-Pesa credentials.
     """
-    logging.error("get_mpesa_access_token function is not implemented.")
-    return None
+    try:
+        auth_string = f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}"
+        encoded_auth_string = base64.b64encode(auth_string.encode()).decode('utf-8')
+
+        headers = {
+            "Authorization": f"Basic {encoded_auth_string}"
+        }
+
+        response = requests.get(
+            f"{MPESA_API_BASE_URL}/oauth/v1/generate?grant_type=client_credentials",
+            headers=headers
+        )
+        response.raise_for_status()
+        token_data = response.json()
+        access_token = token_data.get('access_token')
+        logging.info("Successfully retrieved M-Pesa access token.")
+        return access_token
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error getting M-Pesa access token: {e}")
+        return None
+
+
+def get_mikrotik_active_users():
+    """
+    Retrieves a list of all active users from the MikroTik router.
+    """
+    api_pool = get_mikrotik_connection()
+    if not api_pool:
+        return []
+
+    try:
+        api = api_pool.get_api()
+        # Fetch all active hotspot users
+        active_users = api.get_resource('/ip/hotspot/active').get()
+        user_list = []
+        for user in active_users:
+            user_list.append({
+                'user': user.get('user', 'N/A'),
+                'address': user.get('address', 'N/A'),
+                'mac-address': user.get('mac-address', 'N/A'),
+                'uptime': user.get('uptime', 'N/A'),
+                'bytes-in': user.get('bytes-in', 'N/A'),
+                'bytes-out': user.get('bytes-out', 'N/A')
+            })
+        logging.info(f"Fetched {len(user_list)} active MikroTik users.")
+        return user_list
+    except Exception as e:
+        logging.error(f"Error fetching active MikroTik users: {e}")
+        return []
+    finally:
+        if api_pool:
+            api_pool.disconnect()
 
 
 # --- User & Account Management Functions ---
@@ -678,15 +738,6 @@ def get_mikrotik_users_endpoint(current_user):
     # You must implement the get_mikrotik_active_users function.
     users = get_mikrotik_active_users()
     return jsonify({'success': True, 'users': users})
-
-
-def get_mikrotik_active_users():
-    """
-    Retrieves a list of all active users from the MikroTik router.
-    You must implement this function.
-    """
-    logging.error("get_mikrotik_active_users function is not implemented.")
-    return []
 
 
 @app.route('/api/admin/create_hotspot_code', methods=['POST'])
