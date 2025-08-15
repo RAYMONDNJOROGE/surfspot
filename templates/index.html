@@ -14,7 +14,7 @@
     <!-- Main Container - Now spans full width with responsive padding -->
     <div class="flex-grow flex items-center justify-center w-full p-4 md:p-8">
       <div
-        class="card-bg rounded-2xl shadow-2xl w-full max-w-4xl text-center relative text-white border border-gray-700"
+        class="bg-[#2a1a47] bg-opacity-70 rounded-2xl shadow-2xl w-full max-w-4xl text-center relative text-white"
       >
         <!-- Header Section with Logo -->
         <div class="p-2 md:p-4">
@@ -22,111 +22,152 @@
             <h1
               class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white header-glow"
             >
-              SurfSpot Hotspot
+              Welcome to SurfSpot Hotspot
             </h1>
             <p class="text-base sm:text-lg text-gray-300 mt-2">
-              Choose a subscription plan to connect.
+              Please choose a subscription plan and press on the 'Connect Now' button to get started.
             </p>
           </div>
         </div>
 
-        <!-- Subscription Plans Section -->
+        <!-- Subscription Plans Section - Updated for better mobile display -->
         <div
           id="subscription-plans-section"
-          class="p-1 sm:p-4 md:p-6 grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+          class="p-1 sm:p-4 md:p-6 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4"
         >
-          <!-- Plan Cards -->
+          <!-- Plan 1 - Violet -->
           <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-indigo-500 hover:border-indigo-400 transition duration-300 text-white shadow-xl"
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-violet-600 transition duration-300 text-white"
           >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">1 Hour</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">Quick access</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-indigo-400 mb-6">KSh 10</div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              1 Hour
+            </h3>
+            <p class="text-violet-200 text-sm sm:text-lg mb-4">
+              Extend your stay with more time.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 10
+            </div>
             <button
               data-plan-id="1"
               data-plan-price="10"
               data-plan-name="1 Hour"
-              class="open-phone-modal-btn w-full bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              Connect Now
-            </button>
-          </div>
-
-          <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-violet-500 hover:border-violet-400 transition duration-300 text-white shadow-xl"
-          >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">6 Hours</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">For a work session</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-violet-400 mb-6">KSh 20</div>
-            <button
-              data-plan-id="2"
-              data-plan-price="20"
-              data-plan-name="6 Hours"
               class="open-phone-modal-btn w-full bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
             >
               Connect Now
             </button>
           </div>
 
+          <!-- Plan 2 - Fuchsia -->
           <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-fuchsia-500 hover:border-fuchsia-400 transition duration-300 text-white shadow-xl"
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-fuchsia-600 transition duration-300 text-white"
           >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">12 Hours</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">Half a day access</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-fuchsia-400 mb-6">KSh 30</div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              6 Hours
+            </h3>
+            <p class="text-fuchsia-200 text-sm sm:text-lg mb-4">
+              Get quick and easy access for a couple of hours.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 20
+            </div>
             <button
-              data-plan-id="3"
-              data-plan-price="30"
-              data-plan-name="12 Hours"
+              data-plan-id="2"
+              data-plan-price="20"
+              data-plan-name="6 Hours"
               class="open-phone-modal-btn w-full bg-fuchsia-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-fuchsia-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:ring-offset-2"
             >
               Connect Now
             </button>
           </div>
 
+          <!-- Plan 3 - Rose -->
           <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-rose-500 hover:border-rose-400 transition duration-300 text-white shadow-xl"
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-rose-600 transition duration-300 text-white"
           >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">24 Hours</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">Full day of connectivity</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-rose-400 mb-6">KSh 50</div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              12 Hours
+            </h3>
+            <p class="text-rose-200 text-sm sm:text-lg mb-4">
+              Perfect for a work session.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 30
+            </div>
             <button
-              data-plan-id="4"
-              data-plan-price="50"
-              data-plan-name="24 Hours"
+              data-plan-id="3"
+              data-plan-price="30"
+              data-plan-name="12 Hours"
               class="open-phone-modal-btn w-full bg-rose-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-rose-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
             >
               Connect Now
             </button>
           </div>
 
+          <!-- Plan 4 - Orange -->
           <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-emerald-500 hover:border-emerald-400 transition duration-300 text-white shadow-xl"
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-orange-600 transition duration-300 text-white"
           >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">2 Days</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">Extended access</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 mb-6">KSh 70</div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              24 Hours
+            </h3>
+            <p class="text-orange-200 text-sm sm:text-lg mb-4">
+              Full day of unlimited access.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 50
+            </div>
             <button
-              data-plan-id="5"
-              data-plan-price="70"
-              data-plan-name="2 Days"
-              class="open-phone-modal-btn w-full bg-emerald-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-emerald-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+              data-plan-id="4"
+              data-plan-price="50"
+              data-plan-name="24 Hours"
+              class="open-phone-modal-btn w-full bg-orange-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-orange-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             >
               Connect Now
             </button>
           </div>
 
+          <!-- Plan 5 - Yellow -->
           <div
-            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-teal-500 hover:border-teal-400 transition duration-300 text-white shadow-xl"
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-yellow-500 transition duration-300 text-white"
           >
-            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">7 Days</h3>
-            <p class="text-gray-300 text-sm sm:text-lg mb-4">Weekly subscription</p>
-            <div class="text-2xl sm:text-3xl font-extrabold text-teal-400 mb-6">KSh 300</div>
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              2 Days
+            </h3>
+            <p class="text-yellow-200 text-sm sm:text-lg mb-4">
+              Connect for 48 hours.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 70
+            </div>
+            <button
+              data-plan-id="5"
+              data-plan-price="70"
+              data-plan-name="2 Days"
+              class="open-phone-modal-btn w-full bg-yellow-500 text-white py-3 px-4 rounded-lg shadow-md hover:bg-yellow-600 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2"
+            >
+              Connect Now
+            </button>
+          </div>
+
+          <!-- Plan 6 - Lime -->
+          <div
+            class="plan-card bg-gray-900 p-4 sm:p-6 rounded-xl border border-lime-500 transition duration-300 text-white"
+          >
+            <h3 class="text-xl sm:text-2xl font-bold text-white mb-2">
+              7 Days
+            </h3>
+            <p class="text-lime-200 text-sm sm:text-lg mb-4">
+              For the true power user.
+            </p>
+            <div class="text-2xl sm:text-3xl font-extrabold text-white mb-6">
+              KSh 300
+            </div>
             <button
               data-plan-id="6"
               data-plan-price="300"
               data-plan-name="7 Days"
-              class="open-phone-modal-btn w-full bg-teal-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-teal-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+              class="open-phone-modal-btn w-full bg-lime-500 text-white py-3 px-4 rounded-lg shadow-md hover:bg-lime-600 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-ring-offset-2"
             >
               Connect Now
             </button>
@@ -150,19 +191,21 @@
                 id="subscriberCodeInput"
                 placeholder="voucher code"
                 maxlength="6"
-                class="flex-grow px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-lg"
+                class="flex-grow px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-lg"
               />
               <button
                 id="connectWithCodeBtn"
-                class="w-full sm:w-auto bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                class="w-full sm:w-auto bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
               >
                 Connect
               </button>
             </div>
-             <div id="message-box" class="mt-8 p-4 rounded-lg hidden">
-                <p id="message-text" class="font-medium"></p>
-              </div>
           </div>
+        </div>
+
+        <!-- Message Box for user feedback -->
+        <div id="message-box" class="mt-8 p-4 rounded-lg">
+          <p id="message-text" class="font-medium"></p>
         </div>
       </div>
     </div>
@@ -189,10 +232,10 @@
     </button>
 
     <!-- Subscription Status Modal (Initial check on page load) -->
-    <div id="check-subscription-modal" class="stk-modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="stk-modal-content text-center flex flex-col items-center p-6 rounded-xl shadow-2xl w-11/12 max-w-sm">
+    <div id="check-subscription-modal" class="stk-modal-overlay">
+      <div class="stk-modal-content text-center flex flex-col items-center">
         <div class="spinner mb-4"></div>
-        <h2 class="text-2xl font-bold mb-2">Checking Status...</h2>
+        <h2 class="text-2xl font-bold mb-2">Checking Subscription Status...</h2>
         <p class="text-gray-300 text-sm mb-4">
           Please wait while we check for an active account.
         </p>
@@ -200,21 +243,21 @@
     </div>
 
     <!-- STK Push Initiated Modal -->
-    <div id="stk-initiated-modal" class="stk-modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="stk-modal-content text-center flex flex-col items-center p-6 rounded-xl shadow-2xl w-11/12 max-w-sm">
+    <div id="stk-initiated-modal" class="stk-modal-overlay">
+      <div class="stk-modal-content text-center flex flex-col items-center">
         <div class="spinner mb-4"></div>
         <h2 class="text-2xl font-bold mb-2">
-          Transaction initiated!
+          Transaction initiated successfully!
         </h2>
         <p class="text-gray-300 text-sm mb-4">
-          Please check your phone and enter your M-Pesa PIN.
+          Please complete the payment on your phone to get connected.
         </p>
       </div>
     </div>
 
     <!-- STK Push Status Modal -->
-    <div id="stk-status-modal" class="stk-modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="stk-modal-content text-center p-6 rounded-xl shadow-2xl w-11/12 max-w-sm relative">
+    <div id="stk-status-modal" class="stk-modal-overlay">
+      <div class="stk-modal-content text-center">
         <button
           id="close-stk-status"
           class="absolute top-4 right-4 text-gray-300 hover:text-white text-2xl font-bold"
@@ -228,7 +271,7 @@
         <p id="stk-status-message" class="text-gray-300 mb-4"></p>
         <button
           id="stk-status-action-btn"
-          class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          class="w-full bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
         >
           Close
         </button>
@@ -236,8 +279,8 @@
     </div>
 
     <!-- Phone Number Input Modal -->
-    <div id="phone-input-modal" class="modal-backdrop fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="modal-content text-center p-6 rounded-xl shadow-2xl w-11/12 max-w-md relative" data-selected-plan="">
+    <div id="phone-input-modal" class="modal-backdrop">
+      <div class="modal-content text-center" data-selected-plan="">
         <button
           id="close-phone-input"
           class="absolute top-4 right-4 text-gray-300 hover:text-white text-2xl font-bold"
@@ -246,17 +289,18 @@
         </button>
         <h2 class="text-3xl font-bold mb-4">Enter your Phone Number</h2>
         <p class="text-gray-300 mb-4">
-          Enter your Safaricom number to pay for <span id="plan-name"></span>.
+          Please enter your Safaricom phone number to proceed with the payment
+          for <span id="plan-name"></span>.
         </p>
         <input
           type="tel"
           id="phoneNumber"
           placeholder="e.g., 07XXXXXXXX or 01XXXXXXXX"
-          class="mt-1 block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-lg mb-4"
+          class="mt-1 block w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500 sm:text-lg mb-4"
         />
         <button
           id="submit-phone-number"
-          class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          class="w-full bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
         >
           Continue to Payment
         </button>
@@ -265,8 +309,8 @@
     </div>
 
     <!-- Subscriber Status Modal -->
-    <div id="subscriber-status-modal" class="stk-modal-overlay fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="stk-modal-content text-center p-6 rounded-xl shadow-2xl w-11/12 max-w-sm relative">
+    <div id="subscriber-status-modal" class="stk-modal-overlay">
+      <div class="stk-modal-content text-center">
         <button
           id="close-subscriber-status"
           class="absolute top-4 right-4 text-gray-300 hover:text-white text-2xl font-bold"
@@ -280,7 +324,7 @@
         <p id="subscriber-status-message" class="text-gray-300 mb-4"></p>
         <button
           id="subscriber-status-action-btn"
-          class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          class="w-full bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
         >
           Close
         </button>
@@ -288,8 +332,8 @@
     </div>
 
     <!-- Admin Login Modal -->
-    <div id="admin-login-modal" class="modal-backdrop fixed inset-0 z-50 items-center justify-center hidden">
-      <div class="modal-content text-center p-6 rounded-xl shadow-2xl w-11/12 max-w-md relative">
+    <div id="admin-login-modal" class="modal-backdrop">
+      <div class="modal-content text-center">
         <button
           id="close-admin-login"
           class="absolute top-4 right-4 text-gray-300 hover:text-white text-2xl font-bold"
@@ -302,19 +346,19 @@
             type="text"
             id="admin-username"
             placeholder="Username"
-            class="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            class="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
             required
           />
           <input
             type="password"
             id="admin-password"
             placeholder="Password"
-            class="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            class="w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
             required
           />
           <button
             type="submit"
-            class="w-full bg-indigo-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            class="w-full bg-violet-600 text-white py-3 px-4 rounded-lg shadow-md hover:bg-violet-700 transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
           >
             Login
           </button>
@@ -324,8 +368,8 @@
     </div>
 
     <!-- Admin Dashboard Modal -->
-    <div id="admin-dashboard-modal" class="modal-backdrop fixed inset-0 z-50 items-center justify-center hidden overflow-y-auto">
-      <div class="modal-content w-full max-w-6xl p-8 text-left my-8">
+    <div id="admin-dashboard-modal" class="modal-backdrop">
+      <div class="modal-content w-full max-w-6xl p-8 text-left">
         <div class="flex justify-between items-center mb-6">
             <h2 class="text-3xl font-bold text-white">Admin Dashboard</h2>
             <div class="flex items-center gap-4">
@@ -341,9 +385,9 @@
         <div class="grid md:grid-cols-2 gap-8">
           <!-- User Accounts Section -->
           <div>
-            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="wifi" class="text-indigo-400"></span> Active Hotspot Users</h3>
-            <div class="bg-gray-800 p-4 rounded-lg shadow-inner overflow-x-auto" style="max-height: 400px;">
-              <div id="mikrotik-users-table">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="wifi" class="text-violet-400"></span> Active Hotspot Users</h3>
+            <div class="bg-gray-800 p-4 rounded-lg overflow-x-auto">
+              <div id="mikrotik-users-table" class="bg-gray-800 p-4 rounded-lg shadow-inner overflow-x-auto">
                   <p class="text-center text-gray-500">Loading active users...</p>
               </div>
             </div>
@@ -351,7 +395,7 @@
 
           <!-- Create Hotspot Account Section -->
           <div>
-            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="ticket" class="text-indigo-400"></span> Create New Code</h3>
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="ticket" class="text-violet-400"></span> Create New Code</h3>
             <div class="bg-gray-800 p-6 rounded-lg">
               <form id="create-account-form" class="space-y-4">
                 <div>
@@ -360,7 +404,7 @@
                       type="text"
                       id="new-account-mac"
                       placeholder="e.g., 00:1A:2B:3C:4D:5E"
-                      class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                     />
                 </div>
                 <div>
@@ -370,7 +414,7 @@
                       id="new-account-expiry"
                       value="7"
                       min="1"
-                      class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                     />
                 </div>
                 <button
@@ -388,7 +432,7 @@
           </div>
           <!-- Admin Settings Section -->
           <div class="col-span-2">
-            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="settings-2" class="text-indigo-400"></span> Admin Settings</h3>
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2"><span data-lucide="settings-2" class="text-violet-400"></span> Admin Settings</h3>
             <div class="bg-gray-800 p-6 rounded-lg">
               <div class="grid md:grid-cols-2 gap-8">
                 <!-- Change Password Form -->
@@ -401,7 +445,7 @@
                         type="password"
                         id="old-password"
                         placeholder="Enter old password"
-                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                         required
                       />
                     </div>
@@ -411,7 +455,7 @@
                         type="password"
                         id="new-password"
                         placeholder="Enter new password"
-                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                         required
                       />
                     </div>
@@ -438,7 +482,7 @@
                         type="text"
                         id="update-username"
                         placeholder="Enter new username"
-                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                         required
                       />
                     </div>
@@ -448,7 +492,7 @@
                         type="password"
                         id="update-password"
                         placeholder="Enter new password"
-                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        class="mt-1 w-full px-4 py-3 border border-gray-600 bg-gray-700 text-white rounded-lg shadow-sm focus:ring-violet-500 focus:border-violet-500"
                         required
                       />
                     </div>
@@ -491,7 +535,7 @@
 
     <!-- Footer with customer support links -->
     <footer
-      class="w-full p-4 md:p-6 mt-8 card-bg rounded-t-2xl shadow-inner text-center border-t border-gray-700"
+      class="w-full p-4 md:p-6 mt-8 bg-[#2a1a47] bg-opacity-70 rounded-t-2xl shadow-inner text-center"
     >
       <div
         class="flex flex-col sm:flex-row items-center justify-center gap-4 text-gray-400"
@@ -499,7 +543,7 @@
         <!-- Phone number link -->
         <a
           href="tel:+254717888783"
-          class="hover:text-indigo-400 transition-colors duration-200 flex items-center gap-2"
+          class="hover:text-violet-400 transition-colors duration-200 flex items-center gap-2"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -517,7 +561,7 @@
         <!-- Email link -->
         <a
           href="mailto:surfspotinternet@gmail.com"
-          class="hover:text-indigo-400 transition-colors duration-200 flex items-center gap-2"
+          class="hover:text-violet-400 transition-colors duration-200 flex items-center gap-2"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
