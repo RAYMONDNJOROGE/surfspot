@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://surf-keua.onrender.com/api';
+const API_BASE_URL = 'https://surfspot.onrender.com/api';
     const ADMIN_API_BASE_URL = `${API_BASE_URL}/admin`;
 
     // Utility function to show a modal
