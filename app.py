@@ -2,6 +2,7 @@ import os
 import logging
 import secrets
 import string
+import threading
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from datetime import datetime, timedelta
@@ -406,8 +407,19 @@ def token_required(f):
     return decorated
 
 
-# --- Public API Endpoints ---
+def amount_to_hours(amount):
+    """Maps payment amounts to hours of access."""
+    amount = int(amount)
+    if amount == 10: return 1
+    if amount == 20: return 6
+    if amount == 30: return 12
+    if amount == 50: return 24
+    if amount == 70: return 48
+    if amount == 300: return 168
+    return 0
 
+
+# --- Public API Endpoints ---
 @app.route('/')
 def serve_index():
     """Serves the main HTML landing page."""
@@ -480,25 +492,41 @@ def initiate_payment():
     data = request.get_json()
     phone_number = data.get('phone_number')
     amount = data.get('amount')
-    mac_address = data.get('mac_address')  # MAC address is now required directly
-    logging.info(f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address}")
+    mac_address_from_request = data.get('mac_address')
+    logging.info(
+        f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address_from_request}")
 
-    if not all([phone_number, amount, mac_address]):
+    if not all([phone_number, amount, mac_address_from_request]):
         logging.warning("Missing data for payment initiation.")
         return jsonify({'success': False, 'message': 'Missing data'}), 400
 
-    # Step 1: Connect to the database. If it fails, stop all processes.
+    # --- MAC Address Security Check ---
+    client_ip = request.remote_addr
+    mac_address_from_mikrotik = get_mac_from_ip(client_ip)
+
+    if not mac_address_from_mikrotik:
+        logging.warning(f"Could not get MAC address from MikroTik for IP {client_ip}.")
+        return jsonify({'success': False,
+                        'message': 'Could not verify your device. Please ensure you are connected to the hotspot.'}), 400
+
+    if mac_address_from_request != mac_address_from_mikrotik:
+        logging.error(
+            f"MAC address mismatch! Request: {mac_address_from_request}, MikroTik: {mac_address_from_mikrotik}")
+        return jsonify({'success': False, 'message': 'Invalid MAC address. Please try again.'}), 400
+
+    # Use the verified MAC address from now on.
+    mac_address = mac_address_from_mikrotik
+
     conn = get_db_connection()
     if conn is None:
         logging.error("Database connection failed. Cannot proceed with payment.")
         return jsonify({
             'success': False,
             'message': 'Cannot process payment at this time. Please try again later.'
-        }), 503  # 503 Service Unavailable
+        }), 503
 
     try:
         cursor = conn.cursor(dictionary=True)
-        # Check for an existing active subscription before payment
         query = "SELECT id FROM users WHERE mac_address = %s AND status = 'active' AND expiry > %s"
         cursor.execute(query, (mac_address, datetime.now()))
         if cursor.fetchone():
@@ -541,8 +569,6 @@ def initiate_payment():
         "TransactionDesc": f"Payment for {amount_to_hours(amount)} hour hotspot access"
     }
 
-    logging.info(f"M-Pesa STK Push Request Payload: {stk_push_data}")
-
     headers = {
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json"
@@ -557,7 +583,6 @@ def initiate_payment():
         response.raise_for_status()
 
         response_json = response.json()
-        logging.info(f"M-Pesa STK Push Response: {response_json}")
         if 'CheckoutRequestID' in response_json:
             conn = get_db_connection()
             if conn is not None:
@@ -568,8 +593,6 @@ def initiate_payment():
                            datetime.now())
                     cursor.execute(sql, val)
                     conn.commit()
-                    logging.info(
-                        f"Payment initiated and saved to DB with CheckoutRequestID: {response_json['CheckoutRequestID']} for MAC: {mac_address}")
                 except Exception as e:
                     logging.error(f"Error saving payment to DB: {e}")
                 finally:
@@ -593,11 +616,61 @@ def initiate_payment():
         return jsonify({'success': False, 'message': 'Failed to connect to M-Pesa API.'}), 500
 
 
+def background_activate_user(checkout_request_id, amount, mac_address, phone_number):
+    """
+    Worker function to process the payment and activate the user in the background.
+    This is called by the main Flask thread to avoid blocking the M-Pesa callback.
+    """
+    logging.info(f"Starting background worker for transaction {checkout_request_id}...")
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            logging.error("Failed to connect to DB in background worker. Cannot process transaction.")
+            return
+
+        cursor = conn.cursor()
+
+        plan_hours = amount_to_hours(amount)
+        expiry_time = datetime.now() + timedelta(hours=plan_hours)
+
+        # 1. Update the payment status in the database
+        sql_update_payment = "UPDATE payments SET status = 'paid' WHERE transaction_id = %s"
+        cursor.execute(sql_update_payment, (checkout_request_id,))
+
+        # 2. Add or update the user in the 'users' table
+        sql_user_insert_or_update = "INSERT INTO users (mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE expiry = %s, status = 'active'"
+        cursor.execute(sql_user_insert_or_update, (mac_address, expiry_time, 'active', datetime.now(), expiry_time))
+
+        conn.commit()
+        logging.info(f"Database updated for MAC: {mac_address}. Expiry set to {expiry_time}.")
+
+        # 3. Add or update the user on the MikroTik hotspot
+        success = add_user_to_hotspot(phone_number, mac_address, plan_hours)
+        if success:
+            logging.info(f"User {phone_number} successfully added/updated on MikroTik hotspot.")
+        else:
+            logging.error(f"Failed to add/update user {phone_number} on MikroTik.")
+
+    except Exception as e:
+        logging.error(f"Error in background worker for transaction {checkout_request_id}: {e}")
+        if conn and conn.is_connected():
+            conn.rollback()
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+    logging.info(f"Background worker finished for transaction {checkout_request_id}.")
+
+
 @app.route('/api/mpesa_callback', methods=['POST'])
 def mpesa_callback():
     """
     Endpoint that receives the callback from the M-Pesa API.
-    This is where we process the payment status and activate the hotspot.
+    This function now delegates the time-consuming tasks to a background worker.
     """
     data = request.get_json()
     logging.info(f"Received M-Pesa callback: {data}")
@@ -611,62 +684,38 @@ def mpesa_callback():
             return jsonify({'message': 'Database connection failed'}), 500
 
         cursor = conn.cursor(dictionary=True)
-
         result_code = data['Body']['stkCallback']['ResultCode']
         checkout_request_id = data['Body']['stkCallback']['CheckoutRequestID']
 
-        # Optimized query to get only the necessary payment info
-        cursor.execute("SELECT amount, mac_address, phone_number FROM payments WHERE transaction_id = %s",
-                       (checkout_request_id,))
-        payment = cursor.fetchone()
-
-        if not payment:
-            logging.error(f"Callback error: Payment with transaction_id {checkout_request_id} not found in database.")
-            return jsonify({'message': 'Payment not found'}), 404
-
         if result_code == 0:
-            payment_status = 'paid'
+            cursor.execute("SELECT amount, mac_address, phone_number FROM payments WHERE transaction_id = %s",
+                           (checkout_request_id,))
+            payment = cursor.fetchone()
+
+            if not payment:
+                logging.error(
+                    f"Callback error: Payment with transaction_id {checkout_request_id} not found in database.")
+                return jsonify({'message': 'Payment not found'}), 404
+
             mac_address = payment['mac_address']
             phone_number = payment['phone_number']
             amount = payment['amount']
-            plan_hours = amount_to_hours(amount)
-            expiry_time = datetime.now() + timedelta(hours=plan_hours)
 
-            # Update payment status
-            logging.info(f"Payment successful. Updating payment status for CheckoutRequestID: {checkout_request_id}")
-            cursor.execute("UPDATE payments SET status = %s WHERE transaction_id = %s",
-                           (payment_status, checkout_request_id))
+            thread = threading.Thread(
+                target=background_activate_user,
+                args=(checkout_request_id, amount, mac_address, phone_number)
+            )
+            thread.start()
 
-            # Check if user exists (to prevent creating a new row for an expired sub)
-            cursor.execute("SELECT id FROM users WHERE mac_address = %s", (mac_address,))
-            existing_user = cursor.fetchone()
-
-            if existing_user:
-                # Update expiry for existing user
-                cursor.execute("UPDATE users SET expiry = %s, status = 'active' WHERE mac_address = %s",
-                               (expiry_time, mac_address))
-            else:
-                # Create a new user account
-                logging.info(f"New user. Creating hotspot account for MAC: {mac_address}.")
-                sql = "INSERT INTO users (mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s)"
-                val = (mac_address, expiry_time, 'active', datetime.now())
-                cursor.execute(sql, val)
-
-            conn.commit()
-
-            if add_user_to_hotspot(phone_number, mac_address, plan_hours):
-                logging.info(
-                    f"Payment successful for MAC: {mac_address}. Hotspot account created and MikroTik updated.")
-            else:
-                logging.warning(
-                    f"Payment successful for MAC: {mac_address}, but an error occurred while adding to MikroTik.")
+            logging.info(f"Payment successful. Background worker started for transaction {checkout_request_id}.")
+            return jsonify({'message': 'Callback received, processing in background.'}), 200
         else:
-            payment_status = 'failed'
             logging.warning(f"Payment failed for CheckoutRequestID: {checkout_request_id}. ResultCode: {result_code}")
-            cursor.execute("UPDATE payments SET status = %s WHERE transaction_id = %s",
-                           (payment_status, checkout_request_id))
+            cursor.execute("UPDATE payments SET status = 'failed' WHERE transaction_id = %s",
+                           (checkout_request_id,))
             conn.commit()
             logging.info("Payment status updated to 'failed'.")
+            return jsonify({'message': 'Payment failed or was cancelled.'}), 200
     except KeyError as e:
         logging.error(f"M-Pesa callback payload has a missing key: {e}")
         if conn and conn.is_connected():
@@ -683,25 +732,21 @@ def mpesa_callback():
                 cursor.close()
             conn.close()
 
-    return jsonify({'message': 'Callback received successfully'}), 200
-
 
 @app.route('/api/connect_with_code', methods=['POST'])
 def connect_with_code():
     """
     Connects a user to the hotspot using a pre-generated 6-digit code.
-    This endpoint now gets the MAC address from MikroTik using the client's IP.
     """
     data = request.get_json()
     code = data.get('code')
-    ip_address = data.get('ip_address')
+    ip_address = request.remote_addr  # Get IP directly from the request
     logging.info(f"Request to connect with code '{code}' for IP: {ip_address}")
 
     if not all([code, ip_address]):
         logging.warning("Missing data for code connection.")
         return jsonify({'success': False, 'message': 'Missing code or IP address'}), 400
 
-    # Get the MAC address from MikroTik based on the IP
     mac_address = get_mac_from_ip(ip_address)
     if not mac_address:
         return jsonify(
@@ -713,7 +758,6 @@ def connect_with_code():
 
     try:
         cursor = conn.cursor(dictionary=True)
-        # Refined query: only get what you need
         cursor.execute("SELECT expiry, mac_address FROM codes WHERE code = %s", (code,))
         account = cursor.fetchone()
 
@@ -733,10 +777,9 @@ def connect_with_code():
         logging.info(f"Code '{code}' is valid. Activating for MAC: {mac_address}")
         cursor.execute("UPDATE codes SET mac_address = %s, status = 'active' WHERE code = %s", (mac_address, code))
 
-        # Create a new user account entry
         time_left = (account['expiry'] - datetime.now()).total_seconds() / 3600
-        sql = "INSERT INTO users (mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s)"
-        val = (mac_address, account['expiry'], 'active', datetime.now())
+        sql = "INSERT INTO users (mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE expiry = %s, status = 'active'"
+        val = (mac_address, account['expiry'], 'active', datetime.now(), account['expiry'])
         cursor.execute(sql, val)
         conn.commit()
 
@@ -780,7 +823,6 @@ def admin_login():
 
     try:
         cursor = conn.cursor(dictionary=True)
-        # Refined query to get only the password hash
         cursor.execute("SELECT password_hash FROM admins WHERE username = %s", (username,))
         admin_user = cursor.fetchone()
 
@@ -801,6 +843,135 @@ def admin_login():
             conn.close()
 
     return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+
+
+@app.route('/api/admin/users', methods=['GET'])
+@token_required
+def get_users(current_user):
+    """Returns a list of all active and expired users from the database."""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'message': 'Database unavailable.'}), 503
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        query = "SELECT mac_address, expiry, status, created_at FROM users"
+        cursor.execute(query)
+        users = cursor.fetchall()
+
+        # Fetch active users from MikroTik for comparison
+        mikrotik_active_users = get_mikrotik_active_users()
+        mikrotik_macs = {user['mac_address'] for user in mikrotik_active_users}
+
+        # Enrich database user data with MikroTik status
+        for user in users:
+            user['is_active_on_mikrotik'] = user['mac_address'] in mikrotik_macs
+            user['expiry'] = user['expiry'].isoformat()
+            user['created_at'] = user['created_at'].isoformat()
+
+        logging.info(f"Admin '{current_user.get('user')}' fetched {len(users)} users.")
+        return jsonify(users), 200
+    except Exception as e:
+        logging.error(f"Error fetching users for admin: {e}")
+        return jsonify({'message': 'An error occurred.'}), 500
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+
+@app.route('/api/admin/clear_user/<string:mac_address>', methods=['DELETE'])
+@token_required
+def clear_user(current_user, mac_address):
+    """Removes a user from the database and MikroTik hotspot."""
+    if not mac_address:
+        return jsonify({'message': 'MAC address is required.'}), 400
+
+    success_db = False
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            sql = "DELETE FROM users WHERE mac_address = %s"
+            cursor.execute(sql, (mac_address,))
+            conn.commit()
+            success_db = cursor.rowcount > 0
+        except Exception as e:
+            logging.error(f"Error deleting user {mac_address} from database: {e}")
+        finally:
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
+
+    success_mikrotik = remove_user_from_hotspot(mac_address)
+
+    if success_db or success_mikrotik:
+        logging.info(
+            f"Admin '{current_user.get('user')}' cleared user with MAC {mac_address}. DB success: {success_db}, MikroTik success: {success_mikrotik}.")
+        return jsonify({'message': f'User {mac_address} cleared successfully.'}), 200
+    else:
+        logging.warning(f"Admin '{current_user.get('user')}' failed to clear user with MAC {mac_address}.")
+        return jsonify({'message': 'Failed to clear user. User may not exist.'}), 404
+
+
+@app.route('/api/admin/generate_codes', methods=['POST'])
+@token_required
+def generate_codes(current_user):
+    """Generates and stores new access codes in the database."""
+    data = request.get_json()
+    count = data.get('count', 1)
+
+    codes_generated = []
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'message': 'Database unavailable.'}), 503
+
+    try:
+        cursor = conn.cursor()
+        for _ in range(count):
+            code = generate_alphanumeric_code()
+            expiry_time = datetime.now() + timedelta(days=7)  # Codes expire in 7 days by default
+            sql = "INSERT INTO codes (code, expiry, status, created_at) VALUES (%s, %s, %s, %s)"
+            val = (code, expiry_time, 'pending', datetime.now())
+            cursor.execute(sql, val)
+            codes_generated.append(code)
+        conn.commit()
+        logging.info(f"Admin '{current_user.get('user')}' generated {count} access codes.")
+        return jsonify({'message': f'{count} codes generated successfully.', 'codes': codes_generated}), 201
+    except Exception as e:
+        logging.error(f"Error generating codes for admin: {e}")
+        return jsonify({'message': 'An error occurred while generating codes.'}), 500
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+
+@app.route('/api/admin/codes', methods=['GET'])
+@token_required
+def get_codes(current_user):
+    """Returns a list of all generated codes."""
+    conn = get_db_connection()
+    if conn is None:
+        return jsonify({'message': 'Database unavailable.'}), 503
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        query = "SELECT code, mac_address, expiry, status, created_at FROM codes"
+        cursor.execute(query)
+        codes = cursor.fetchall()
+        for code in codes:
+            code['expiry'] = code['expiry'].isoformat()
+            code['created_at'] = code['created_at'].isoformat()
+        logging.info(f"Admin '{current_user.get('user')}' fetched {len(codes)} codes.")
+        return jsonify(codes), 200
+    except Exception as e:
+        logging.error(f"Error fetching codes for admin: {e}")
+        return jsonify({'message': 'An error occurred.'}), 500
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 @app.route('/api/admin/update_credentials', methods=['POST'])
@@ -898,7 +1069,6 @@ def create_hotspot_code(current_user):
     This can be used for manual connection.
     """
     data = request.get_json()
-    mac_address = data.get('mac_address')
     expiry_days = data.get('expiry_days', 7)
     logging.info(f"Admin '{current_user['user']}' is creating a new hotspot code with expiry of {expiry_days} days.")
 
@@ -909,6 +1079,7 @@ def create_hotspot_code(current_user):
     try:
         cursor = conn.cursor()
         code = generate_alphanumeric_code()
+
         # Check for uniqueness and regenerate if needed
         cursor.execute("SELECT COUNT(*) FROM codes WHERE code = %s", (code,))
         while cursor.fetchone()[0] > 0:
@@ -916,8 +1087,8 @@ def create_hotspot_code(current_user):
             code = generate_alphanumeric_code()
             cursor.execute("SELECT COUNT(*) FROM codes WHERE code = %s", (code,))
 
-        sql = "INSERT INTO codes (code, mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s, %s, %s)"
-        val = (code, mac_address, datetime.now() + timedelta(days=expiry_days), 'pending', datetime.now())
+        sql = "INSERT INTO codes (code, expiry, status, created_at) VALUES (%s, %s, %s, %s)"
+        val = (code, datetime.now() + timedelta(days=expiry_days), 'pending', datetime.now())
         cursor.execute(sql, val)
         conn.commit()
         logging.info(f"Admin '{current_user['user']}' successfully created code: {code}.")
@@ -937,22 +1108,7 @@ def create_hotspot_code(current_user):
             conn.close()
 
 
-# --- Helper Functions ---
-def amount_to_hours(amount):
-    """Maps payment amounts to hours of access."""
-    amount = int(amount)
-    if amount == 10: return 1
-    if amount == 20: return 6
-    if amount == 30: return 12
-    if amount == 50: return 24
-    if amount == 70: return 48
-    if amount == 300: return 168
-    return 0
-
-
 if __name__ == '__main__':
-    # You should run this once to set up your tables and admin
     create_db_tables()
     bootstrap_admin()
-    app.run(debug=True, port=5000)
-
+    app.run(debug=True, host='0.0.0.0', port=5000)
