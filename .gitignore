@@ -1,2 +1,52 @@
-#ignore the environment variables file when you commit
-.env*
+# -----------------------------------------------------------
+# Environment variables and sensitive data
+# -----------------------------------------------------------
+
+# This is extremely important for security.
+# The .env file contains sensitive information like API keys.
+.env
+.env.*
+
+# Logs
+*.log
+
+
+# -----------------------------------------------------------
+# Python-specific files
+# -----------------------------------------------------------
+
+# Compiled Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+# This is crucial! Never commit your virtual environment.
+# Common names are 'venv', 'env', '.venv', or '.env'.
+venv/
+env/
+.venv/
+.env/
+
+# Dependency management
+# Ignore generated files from various package managers
+.Python
+.eggs/
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+sdist/
+
+# Test and coverage artifacts
+# Ignore cache and report files from testing frameworks like pytest
+.pytest_cache/
+.coverage
+
+# IPython/Jupyter Notebooks
+# Ignore checkpoint files
+.ipynb_checkpoints
+
+# MyPy static analysis
+.mypy_cache/
