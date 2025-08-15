@@ -1,35 +1,24 @@
- /* Custom CSS for a unique background and animations */
-      body {
-        background: radial-gradient(at 50% 50%, #0c0a09, #170d2b);
-        font-family: 'Inter', sans-serif;
-      }
-
-      /* A subtle blur effect for the main card and modals */
-      .card-bg {
-        background-color: rgba(22, 11, 41, 0.7);
-        backdrop-filter: blur(10px);
-      }
-      .modal-backdrop, .stk-modal-overlay {
-        background-color: rgba(0, 0, 0, 0.75);
-        backdrop-filter: blur(5px);
-      }
-      .modal-content, .stk-modal-content {
-        background: linear-gradient(135deg, #1f143a, #2b1d55);
-      }
-
-      /* Animations for the loading spinners */
+/* Custom styles for the spinner */
       .spinner {
-        width: 56px;
-        height: 56px;
-        border: 4px solid #14b8a6;
-        border-bottom-color: transparent;
+        border: 4px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
+        border-top: 4px solid #fff;
+        width: 32px;
+        height: 32px;
+        -webkit-animation: spin 1s linear infinite; /* Safari */
+        animation: spin 1s linear infinite;
         display: inline-block;
-        box-sizing: border-box;
-        animation: rotation 1s linear infinite;
       }
-
-      @keyframes rotation {
+      /* Safari */
+      @-webkit-keyframes spin {
+        0% {
+          -webkit-transform: rotate(0deg);
+        }
+        100% {
+          -webkit-transform: rotate(360deg);
+        }
+      }
+      @keyframes spin {
         0% {
           transform: rotate(0deg);
         }
@@ -38,43 +27,56 @@
         }
       }
 
-      /* Stylish scrollbar for the dashboard */
-      #mikrotik-users-table::-webkit-scrollbar {
-        height: 8px;
-        background-color: #2b1d55;
-      }
-      #mikrotik-users-table::-webkit-scrollbar-thumb {
-        background-color: #6366f1;
-        border-radius: 4px;
-      }
-      .plan-card:hover {
-        transform: translateY(-5px) scale(1.02);
-      }
-      .plan-card {
-        transition: all 0.3s ease;
-      }
-      .header-glow {
-        text-shadow: 0 0 5px rgba(129, 140, 248, 0.5), 0 0 10px rgba(129, 140, 248, 0.5);
+      /* Custom styles for the overlay modals */
+      .stk-modal-overlay, .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.75);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
       }
 
+      /* Custom styles for the modal content */
+      .stk-modal-content, .modal-content {
+        background: #1f143a; /* Darker background for modals */
+        border-radius: 1rem;
+        padding: 2rem;
+        position: relative;
+        max-width: 90%;
+        max-height: 90%;
+        overflow-y: auto;
+        border: 2px solid #5a3c8e;
+        color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .modal-content {
+        width: 100%;
+        max-width: 600px;
+      }
+
+      /* Custom styles for the back-to-top button */
       #back-to-top-btn {
         display: none;
         position: fixed;
-        bottom: 120px; /* Adjusted position to not overlap with footer */
-        right: 20px;
+        bottom: 1rem;
+        right: 1rem;
         z-index: 99;
-        font-size: 18px;
         border: none;
         outline: none;
-        background-color: #6366f1;
+        background-color: #5a3c8e;
         color: white;
         cursor: pointer;
-        padding: 15px;
-        border-radius: 50%;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
+        padding: 0.75rem;
+        border-radius: 9999px;
+        font-size: 1.125rem;
+        transition: background-color 0.3s ease;
       }
 
       #back-to-top-btn:hover {
-        background-color: #4f46e5;
+        background-color: #7b58b9;
       }
