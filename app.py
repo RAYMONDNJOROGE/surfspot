@@ -237,7 +237,7 @@ def get_mikrotik_connection():
             password=MIKROTIK_PASSWORD,
             plaintext_login=True,
             use_ssl=False,
-            port=8728
+            port=8080
         )
         api = api_pool.get_api()
         logging.info("MikroTik connection successful.")
