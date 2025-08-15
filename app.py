@@ -38,10 +38,10 @@ MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL')
 MPESA_API_BASE_URL = "https://sandbox.safaricom.co.ke"  # Use 'https://api.safaricom.co.ke' for production
 
 # --- MySQL Database Configuration ---
-DB_HOST = os.environ.get('DB_HOST', 'localhost')
-DB_USER = os.environ.get('DB_USER', 'root')
-DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
-DB_NAME = os.environ.get('DB_NAME', 'hotspot_db')
+DB_HOST = os.environ.get('DB_HOST')
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DB_NAME = os.environ.get('DB_NAME')
 
 
 def get_db_connection():
