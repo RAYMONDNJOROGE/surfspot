@@ -1,36 +1,73 @@
-const API_BASE_URL = 'https://surfspot.onrender.com/api';
+    // API Endpoints
+    const API_BASE_URL = 'https://surfspot.onrender.com/api';
     const ADMIN_API_BASE_URL = `${API_BASE_URL}/admin`;
 
-    // Utility function to show a modal
+    // --- Utility Functions ---
+
+    /**
+     * Shows a specified modal by changing its display style.
+     * @param {string} modalId The ID of the modal to show.
+     */
     const showModal = (modalId) => {
         document.getElementById(modalId).style.display = 'flex';
     };
 
-    // Utility function to hide a modal
+    /**
+     * Hides a specified modal by changing its display style.
+     * @param {string} modalId The ID of the modal to hide.
+     */
     const hideModal = (modalId) => {
         document.getElementById(modalId).style.display = 'none';
     };
 
-    // Placeholder function to get a unique MAC address.
-    // In a real captive portal environment, this would be provided by the network.
-    // We use this placeholder to simulate a client's unique identifier.
-    const getClientMacAddress = () => {
-        // This is a placeholder for a real MAC address.
-        // In a true captive portal, you'd get this from the router's redirect.
-        // Here, we generate a fake one for demonstration purposes.
-        const mac = localStorage.getItem('client_mac_address');
-        if (mac) return mac;
+    // --- MAC Address Management (Updated for Backend Fetch) ---
 
-        const fakeMac = '02:00:00:' + Array(3).fill(0).map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':');
-        localStorage.setItem('client_mac_address', fakeMac);
-        return fakeMac;
+    // A cache for the MAC address to avoid multiple backend calls.
+    let cachedMacAddress = null;
+
+    /**
+     * Fetches the real MAC address from a backend service.
+     * This replaces the placeholder function from the previous version.
+     * @returns {Promise<string>} The client's real MAC address.
+     */
+    const getClientMacAddress = async () => {
+        // Return the cached MAC address if it's already been fetched.
+        if (cachedMacAddress) {
+            return cachedMacAddress;
+        }
+
+        try {
+            // New API call to your backend server to get the real MAC address.
+            const response = await fetch(`${API_BASE_URL}/get_mikrotik_mac`);
+            const data = await response.json();
+
+            if (data.success && data.mac_address) {
+                cachedMacAddress = data.mac_address;
+                return cachedMacAddress;
+            } else {
+                // Fallback to a fake MAC address if the backend call fails,
+                // preventing a hard crash.
+                console.error("Backend failed to provide a valid MAC address. Using a fallback.");
+                cachedMacAddress = '02:00:00:' + Array(3).fill(0).map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':');
+                return cachedMacAddress;
+            }
+        } catch (error) {
+            console.error('Error fetching MAC address from backend:', error);
+            // On a network error, also fall back to a fake MAC address.
+            cachedMacAddress = '02:00:00:' + Array(3).fill(0).map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join(':');
+            return cachedMacAddress;
+        }
     };
+
 
     // --- User-facing functionality (STK Push & Code Login) ---
 
-    // Function to check if the client has an active subscription
+    /**
+     * Checks if the client has an existing, active subscription.
+     */
     const checkExistingSubscription = async () => {
-        const macAddress = getClientMacAddress();
+        // Await the asynchronous function to get the real MAC address.
+        const macAddress = await getClientMacAddress();
         showModal('check-subscription-modal');
 
         try {
@@ -61,7 +98,7 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
     // Event listeners for opening the phone number input modal
     document.querySelectorAll('.open-phone-modal-btn').forEach(button => {
-        button.addEventListener('click', (event) => {
+        button.addEventListener('click', async (event) => {
             const planPrice = event.currentTarget.dataset.planPrice;
             const planName = event.currentTarget.dataset.planName;
             document.getElementById('phone-input-modal').dataset.selectedPlanPrice = planPrice;
@@ -73,7 +110,7 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
     // Event listener for submitting the phone number
     document.getElementById('submit-phone-number').addEventListener('click', async () => {
-        const macAddress = getClientMacAddress();
+        const macAddress = await getClientMacAddress(); // Await the MAC address
         const phoneNumber = document.getElementById('phoneNumber').value;
         const planPrice = document.getElementById('phone-input-modal').dataset.selectedPlanPrice;
         const messageEl = document.getElementById('phone-modal-message');
@@ -141,7 +178,7 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
     // Event listener for connecting with a code
     document.getElementById('connectWithCodeBtn').addEventListener('click', async () => {
-        const macAddress = getClientMacAddress();
+        const macAddress = await getClientMacAddress(); // Await the MAC address
         const code = document.getElementById('subscriberCodeInput').value;
         const messageEl = document.getElementById('message-box');
         const messageTextEl = document.getElementById('message-text');
@@ -171,27 +208,8 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
         }
     });
 
-    // Event listener for closing modals
-    document.getElementById('close-phone-input').addEventListener('click', () => hideModal('phone-input-modal'));
-    document.getElementById('close-stk-status').addEventListener('click', () => hideModal('stk-status-modal'));
-    document.getElementById('close-subscriber-status').addEventListener('click', () => hideModal('subscriber-status-modal'));
-    document.getElementById('close-admin-login').addEventListener('click', () => hideModal('admin-login-modal'));
-    document.getElementById('close-admin-dashboard').addEventListener('click', () => hideModal('admin-dashboard-modal'));
-    document.getElementById('stk-status-action-btn').addEventListener('click', () => hideModal('stk-status-modal'));
-
 
     // --- Admin Dashboard Functionality ---
-
-    // Open Admin Login Modal
-    document.getElementById('admin-login-btn').addEventListener('click', () => {
-        showModal('admin-login-modal');
-    });
-
-    // Admin Logout
-    document.getElementById('admin-logout-btn').addEventListener('click', () => {
-        localStorage.removeItem('admin_token');
-        hideModal('admin-dashboard-modal');
-    });
 
     // Handle Admin Login
     document.getElementById('admin-login-form').addEventListener('submit', async (event) => {
@@ -223,7 +241,9 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
         }
     });
 
-    // Fetch and display active users
+    /**
+     * Fetches and displays the list of active users from the Mikrotik router.
+     */
     const fetchActiveUsers = async () => {
         const token = localStorage.getItem('admin_token');
         const tableContainer = document.getElementById('mikrotik-users-table');
@@ -292,9 +312,9 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
         const token = localStorage.getItem('admin_token');
         if (!token) {
-             messageEl.textContent = 'Not authenticated. Please log in.';
-             messageEl.className = 'mt-4 text-sm font-medium text-red-400';
-             return;
+            messageEl.textContent = 'Not authenticated. Please log in.';
+            messageEl.className = 'mt-4 text-sm font-medium text-red-400';
+            return;
         }
 
         const body = {
@@ -348,9 +368,9 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
         const token = localStorage.getItem('admin_token');
         if (!token) {
-             messageEl.textContent = 'Not authenticated. Please log in.';
-             messageEl.className = 'mt-4 text-sm font-medium text-red-400';
-             return;
+            messageEl.textContent = 'Not authenticated. Please log in.';
+            messageEl.className = 'mt-4 text-sm font-medium text-red-400';
+            return;
         }
 
         try {
@@ -398,9 +418,9 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
 
         const token = localStorage.getItem('admin_token');
         if (!token) {
-             messageEl.textContent = 'Not authenticated. Please log in.';
-             messageEl.className = 'mt-4 text-sm font-medium text-red-400';
-             return;
+            messageEl.textContent = 'Not authenticated. Please log in.';
+            messageEl.className = 'mt-4 text-sm font-medium text-red-400';
+            return;
         }
 
         try {
@@ -437,22 +457,40 @@ const API_BASE_URL = 'https://surfspot.onrender.com/api';
         }
     });
 
+    // Event listeners for closing modals
+    document.getElementById('close-phone-input').addEventListener('click', () => hideModal('phone-input-modal'));
+    document.getElementById('close-stk-status').addEventListener('click', () => hideModal('stk-status-modal'));
+    document.getElementById('close-subscriber-status').addEventListener('click', () => hideModal('subscriber-status-modal'));
+    document.getElementById('close-admin-login').addEventListener('click', () => hideModal('admin-login-modal'));
+    document.getElementById('close-admin-dashboard').addEventListener('click', () => hideModal('admin-dashboard-modal'));
+    document.getElementById('stk-status-action-btn').addEventListener('click', () => hideModal('stk-status-modal'));
+
+    // Open Admin Login Modal
+    document.getElementById('admin-login-btn').addEventListener('click', () => {
+        showModal('admin-login-modal');
+    });
+
+    // Admin Logout
+    document.getElementById('admin-logout-btn').addEventListener('click', () => {
+        localStorage.removeItem('admin_token');
+        hideModal('admin-dashboard-modal');
+    });
 
     // Back to top button functionality
     const backToTopBtn = document.getElementById('back-to-top-btn');
     window.addEventListener('scroll', () => {
-      if (window.scrollY > 300) {
-        backToTopBtn.style.display = 'block';
-      } else {
-        backToTopBtn.style.display = 'none';
-      }
+        if (window.scrollY > 300) {
+            backToTopBtn.style.display = 'block';
+        } else {
+            backToTopBtn.style.display = 'none';
+        }
     });
 
     backToTopBtn.addEventListener('click', () => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
     });
 
     // Initial check for subscription and create Lucide icons on page load

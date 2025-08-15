@@ -1,70 +1,35 @@
- @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
-
-      /* Ensure html and body take up the full viewport height */
-      html,
+ /* Custom CSS for a unique background and animations */
       body {
-        height: 100%;
-        margin: 0;
+        background: radial-gradient(at 50% 50%, #0c0a09, #170d2b);
+        font-family: 'Inter', sans-serif;
       }
 
-      body {
-        font-family: "Inter", sans-serif;
-        /* Use a dark, vibrant gradient background */
-        background: linear-gradient(135deg, #1a0f3d, #0b0521);
-        background-attachment: fixed;
-        background-size: cover;
-        color: #e5e7eb; /* Default light text color for readability on dark background */
+      /* A subtle blur effect for the main card and modals */
+      .card-bg {
+        background-color: rgba(22, 11, 41, 0.7);
+        backdrop-filter: blur(10px);
       }
-      /* Custom styles for the message box */
-      #message-box {
-        display: none;
+      .modal-backdrop, .stk-modal-overlay {
+        background-color: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(5px);
       }
-      /* Add a subtle animation to the cards on hover */
-      .plan-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-          0 4px 6px -2px rgba(0, 0, 0, 0.2);
+      .modal-content, .stk-modal-content {
+        background: linear-gradient(135deg, #1f143a, #2b1d55);
       }
-      /* Styles for the modal backdrop (full screen) */
-      .modal-backdrop {
-        position: fixed; /* Ensures the modal covers the entire screen */
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(
-          0,
-          0,
-          0,
-          0.8
-        ); /* Darker, more prominent overlay */
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-      }
-      /* Styles for the modal content */
-      .modal-content {
-        background-color: #130a2c; /* A dark, non-white background */
-        color: #ecf0f1; /* Light text for readability */
-        padding: 2rem;
-        border-radius: 1rem;
-        max-width: 90%;
-        max-height: 90%;
-        overflow-y: auto;
-        position: relative;
-      }
-      /* CSS for the spinner animation */
+
+      /* Animations for the loading spinners */
       .spinner {
-        border: 4px solid rgba(255, 255, 255, 0.3);
-        width: 36px;
-        height: 36px;
+        width: 56px;
+        height: 56px;
+        border: 4px solid #14b8a6;
+        border-bottom-color: transparent;
         border-radius: 50%;
-        border-left-color: #9b59b6; /* A vibrant purple */
-        animation: spin 1s ease infinite;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: rotation 1s linear infinite;
       }
 
-      @keyframes spin {
+      @keyframes rotation {
         0% {
           transform: rotate(0deg);
         }
@@ -73,78 +38,43 @@
         }
       }
 
-      /* Styles for the STK pop-ups to cover the entire screen */
-      .stk-modal-overlay {
-        position: fixed; /* Correctly positions the overlay over the entire viewport */
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.7);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 1001; /* Higher z-index to ensure it's on top */
+      /* Stylish scrollbar for the dashboard */
+      #mikrotik-users-table::-webkit-scrollbar {
+        height: 8px;
+        background-color: #2b1d55;
       }
-
-      .stk-modal-content {
-        background-color: #130a2c; /* Dark background */
-        color: #ecf0f1; /* Light text */
-        padding: 2rem;
-        border-radius: 1rem;
-        max-width: 80%;
-        position: relative;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3),
-          0 4px 6px -2px rgba(0, 0, 0, 0.2);
+      #mikrotik-users-table::-webkit-scrollbar-thumb {
+        background-color: #6366f1;
+        border-radius: 4px;
       }
-
-      /* Styling for the close buttons inside the modals */
-      .modal-content .close-btn {
-        color: #ecf0f1;
+      .plan-card:hover {
+        transform: translateY(-5px) scale(1.02);
       }
-      .modal-content .close-btn:hover {
-        color: #ffffff;
+      .plan-card {
+        transition: all 0.3s ease;
       }
-      #back-to-top-btn {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        background-color: rgba(155, 89, 182, 0.8); /* violet with opacity */
-        color: white;
-        padding: 0.75rem;
-        border-radius: 9999px; /* full rounded */
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: all 0.3s ease-in-out;
-        cursor: pointer;
-        display: none; /* hidden by default */
-        border: none;
-      }
-      #back-to-top-btn:hover {
-        background-color: rgba(155, 89, 182, 1);
-        transform: scale(1.1);
-      }
-
-      /* Custom styles for the header glow effect */
       .header-glow {
-        text-shadow: 0 0 8px rgba(220, 150, 255, 0.7),
-          0 0 15px rgba(220, 150, 255, 0.4);
-        animation: pulse-glow 2s infinite alternate;
+        text-shadow: 0 0 5px rgba(129, 140, 248, 0.5), 0 0 10px rgba(129, 140, 248, 0.5);
       }
 
-      .svg-glow {
-        filter: drop-shadow(0 0 8px rgba(220, 150, 255, 0.7))
-          drop-shadow(0 0 15px rgba(220, 150, 255, 0.4));
-        animation: pulse-glow 2s infinite alternate;
+      #back-to-top-btn {
+        display: none;
+        position: fixed;
+        bottom: 120px; /* Adjusted position to not overlap with footer */
+        right: 20px;
+        z-index: 99;
+        font-size: 18px;
+        border: none;
+        outline: none;
+        background-color: #6366f1;
+        color: white;
+        cursor: pointer;
+        padding: 15px;
+        border-radius: 50%;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
       }
 
-      @keyframes pulse-glow {
-        0% {
-          opacity: 0.8;
-          transform: scale(1);
-        }
-        100% {
-          opacity: 1;
-          transform: scale(1.02);
-        }
+      #back-to-top-btn:hover {
+        background-color: #4f46e5;
       }
