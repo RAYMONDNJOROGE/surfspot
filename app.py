@@ -52,6 +52,7 @@ MIKROTIK_PASSWORD = os.environ.get('MIKROTIK_PASSWORD')
 # --- Database Helper Functions ---
 def get_db_connection():
     """Establishes a connection to the MySQL database."""
+    logging.info("Attempting to connect to the database...")
     try:
         conn = mysql.connector.connect(
             host=DB_HOST,
@@ -63,12 +64,15 @@ def get_db_connection():
         return conn
     except mysql.connector.Error as err:
         if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-            logging.error("Database connection failed: Invalid user or password.")
+            logging.error("Database connection failed: Invalid user or password. Please check your DB credentials.")
         elif err.errno == errorcode.ER_BAD_DB_ERROR:
-            logging.warning("Database does not exist.")
-            return None
+            logging.error(
+                "Database connection failed: The specified database does not exist. Please check your DB_NAME.")
         else:
             logging.error(f"Database connection failed. Ensure MySQL is running. Error: {err}")
+        return None
+    except Exception as e:
+        logging.error(f"An unexpected error occurred during database connection: {e}")
         return None
 
 
@@ -86,6 +90,7 @@ def create_database_if_not_exists(conn):
 
 def create_db_tables():
     """Creates the necessary tables if they don't exist."""
+    logging.info("Starting database table creation process.")
     try:
         conn = mysql.connector.connect(
             host=DB_HOST,
@@ -151,15 +156,15 @@ def create_db_tables():
 
         for name, ddl in tables.items():
             try:
-                logging.info(f"Creating table {name}: ", end='')
+                logging.info(f"Creating table '{name}'...")
                 cursor.execute(ddl)
             except mysql.connector.Error as err:
                 if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                    logging.info("already exists.")
+                    logging.info(f"Table '{name}' already exists.")
                 else:
-                    logging.error(f"Error creating table {name}: {err.msg}")
+                    logging.error(f"Error creating table '{name}': {err.msg}")
             else:
-                logging.info("OK")
+                logging.info(f"Table '{name}' created successfully.")
     except Exception as e:
         logging.error(f"Error creating tables: {e}")
     finally:
@@ -173,6 +178,7 @@ def bootstrap_admin():
     Creates a default admin user in the database if one doesn't exist,
     using credentials from the .env file for initial setup.
     """
+    logging.info("Starting admin user bootstrap process.")
     conn = get_db_connection()
     if conn is None:
         logging.error("Skipping admin bootstrap due to failed database connection.")
@@ -219,10 +225,8 @@ def get_mpesa_access_token():
 
 # --- REAL MIKROTIK INTEGRATION ---
 def get_mikrotik_connection():
-    """
-    Establishes a connection to the MikroTik router.
-    Handles exceptions to prevent worker timeouts.
-    """
+    """Establishes a connection to the MikroTik router."""
+    logging.info("Attempting to connect to MikroTik router...")
     if not all([MIKROTIK_HOST, MIKROTIK_USERNAME, MIKROTIK_PASSWORD]):
         logging.warning("MikroTik credentials are not set in the .env file. Skipping connection.")
         return None
@@ -232,15 +236,14 @@ def get_mikrotik_connection():
             username=MIKROTIK_USERNAME,
             password=MIKROTIK_PASSWORD,
             plaintext_login=True,
-            # Adjusting the timeout for a faster response on connection failure
-            use_ssl=False, # Use False for default setup
-            port=8728 # Default API port
+            use_ssl=False,
+            port=8728
         )
         api = api_pool.get_api()
         logging.info("MikroTik connection successful.")
         return api_pool
     except routeros_api.exceptions.RouterOsApiCommunicationError as e:
-        logging.error(f"MikroTik connection failed: Communication error. Check IP/Port. Error: {e}")
+        logging.error(f"MikroTik connection failed: Communication error. Check IP/Port in .env. Error: {e}")
         return None
     except Exception as e:
         logging.error(f"Error connecting to MikroTik router: {e}")
@@ -251,8 +254,10 @@ def get_mac_from_ip(ip_address):
     """
     Queries MikroTik to get the MAC address associated with a given IP address.
     """
+    logging.info(f"Fetching MAC address for IP '{ip_address}' from MikroTik.")
     api_pool = get_mikrotik_connection()
     if not api_pool:
+        logging.warning("Skipping MikroTik MAC lookup due to connection failure.")
         return None
 
     try:
@@ -275,8 +280,10 @@ def get_mac_from_ip(ip_address):
 
 def get_mikrotik_active_users():
     """Fetches real active users from the MikroTik hotspot."""
+    logging.info("Fetching active users from MikroTik.")
     api_pool = get_mikrotik_connection()
     if not api_pool:
+        logging.warning("Skipping MikroTik user fetch due to connection failure.")
         return []
 
     try:
@@ -300,8 +307,10 @@ def add_user_to_hotspot(username, password, plan_hours):
     """
     Adds or updates a user on the MikroTik hotspot with a specific time limit.
     """
+    logging.info(f"Attempting to add/update user '{username}' on MikroTik hotspot.")
     api_pool = get_mikrotik_connection()
     if not api_pool:
+        logging.warning(f"Skipping user '{username}' addition due to MikroTik connection failure.")
         return False
 
     try:
@@ -339,8 +348,10 @@ def remove_user_from_hotspot(username):
     """
     Removes a user from the MikroTik hotspot.
     """
+    logging.info(f"Attempting to remove user '{username}' from MikroTik hotspot.")
     api_pool = get_mikrotik_connection()
     if not api_pool:
+        logging.warning(f"Skipping user '{username}' removal due to MikroTik connection failure.")
         return False
 
     try:
@@ -371,6 +382,7 @@ def generate_alphanumeric_code():
 # --- Admin Authentication Decorator ---
 def token_required(f):
     """Decorator to protect admin routes."""
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token = None
@@ -424,11 +436,13 @@ def check_mac_subscription():
 
     mac_address = get_mac_from_ip(ip_address)
     if not mac_address:
-        return jsonify({'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
+        return jsonify(
+            {'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
 
     conn = get_db_connection()
     if conn is None:
-        return jsonify({'success': False, 'is_subscribed': False, 'message': 'Subscription check is temporarily unavailable due to a database error.'}), 503
+        return jsonify({'success': False, 'is_subscribed': False,
+                        'message': 'Subscription check is temporarily unavailable due to a database error.'}), 503
 
     try:
         cursor = conn.cursor(dictionary=True)
@@ -463,7 +477,8 @@ def initiate_payment():
     phone_number = data.get('phone_number')
     amount = data.get('amount')
     mac_address_from_request = data.get('mac_address')
-    logging.info(f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address_from_request}")
+    logging.info(
+        f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address_from_request}")
 
     if not all([phone_number, amount, mac_address_from_request]):
         logging.warning("Missing data for payment initiation.")
@@ -474,17 +489,22 @@ def initiate_payment():
 
     if not mac_address_from_mikrotik:
         logging.warning(f"Could not get MAC address from MikroTik for IP {client_ip}.")
-        return jsonify({'success': False, 'message': 'Could not verify your device. Please ensure you are connected to the hotspot.'}), 400
+        return jsonify({'success': False,
+                        'message': 'Could not verify your device. Please ensure you are connected to the hotspot.'}), 400
 
     if mac_address_from_request != mac_address_from_mikrotik:
-        logging.error(f"MAC address mismatch! Request: {mac_address_from_request}, MikroTik: {mac_address_from_mikrotik}")
+        logging.error(
+            f"MAC address mismatch! Request: {mac_address_from_request}, MikroTik: {mac_address_from_mikrotik}")
         return jsonify({'success': False, 'message': 'Invalid MAC address. Please try again.'}), 400
 
     mac_address = mac_address_from_mikrotik
+
+    logging.info("Checking for an existing subscription before processing payment.")
     conn = get_db_connection()
     if conn is None:
         logging.error("Database connection failed. Cannot proceed with payment.")
-        return jsonify({'success': False, 'message': 'Cannot process payment at this time. Please try again later.'}), 503
+        return jsonify(
+            {'success': False, 'message': 'Cannot process payment at this time. Please try again later.'}), 503
 
     try:
         cursor = conn.cursor(dictionary=True)
@@ -501,7 +521,8 @@ def initiate_payment():
             cursor.close()
             conn.close()
 
-    if not all([MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_BUSINESS_SHORTCODE, MPESA_PASSKEY, MPESA_CALLBACK_URL]):
+    if not all(
+            [MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_BUSINESS_SHORTCODE, MPESA_PASSKEY, MPESA_CALLBACK_URL]):
         logging.error("M-Pesa API credentials are not set in the .env file.")
         return jsonify({'success': False, 'message': 'M-Pesa API credentials are not set in the .env file.'}), 500
 
@@ -544,14 +565,17 @@ def initiate_payment():
 
         response_json = response.json()
         if 'CheckoutRequestID' in response_json:
+            logging.info(f"STK push successful for transaction {response_json['CheckoutRequestID']}. Saving to DB.")
             conn = get_db_connection()
             if conn is not None:
                 try:
                     cursor = conn.cursor()
                     sql = "INSERT INTO payments (transaction_id, phone_number, amount, mac_address, status, created_at) VALUES (%s, %s, %s, %s, %s, %s)"
-                    val = (response_json['CheckoutRequestID'], phone_number, amount, mac_address, 'pending', datetime.now())
+                    val = (response_json['CheckoutRequestID'], phone_number, amount, mac_address, 'pending',
+                           datetime.now())
                     cursor.execute(sql, val)
                     conn.commit()
+                    logging.info(f"Payment transaction {response_json['CheckoutRequestID']} saved to database.")
                 except Exception as e:
                     logging.error(f"Error saving payment to DB: {e}")
                 finally:
@@ -566,7 +590,8 @@ def initiate_payment():
             })
         else:
             logging.error(f"M-Pesa API responded with an error: {response_json}")
-            return jsonify({'success': False, 'message': response_json.get('CustomerMessage', 'An error occurred.')}), 400
+            return jsonify(
+                {'success': False, 'message': response_json.get('CustomerMessage', 'An error occurred.')}), 400
     except requests.exceptions.RequestException as e:
         logging.error(f"Error initiating M-Pesa STK push: {e}")
         if e.response:
@@ -591,9 +616,11 @@ def background_activate_user(checkout_request_id, amount, mac_address, phone_num
         plan_hours = amount_to_hours(amount)
         expiry_time = datetime.now() + timedelta(hours=plan_hours)
 
+        logging.info(f"Updating payment status for transaction {checkout_request_id}...")
         sql_update_payment = "UPDATE payments SET status = 'paid' WHERE transaction_id = %s"
         cursor.execute(sql_update_payment, (checkout_request_id,))
 
+        logging.info(f"Inserting/updating user {mac_address} in database with expiry {expiry_time}.")
         sql_user_insert_or_update = "INSERT INTO users (mac_address, expiry, status, created_at) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE expiry = %s, status = 'active'"
         cursor.execute(sql_user_insert_or_update, (mac_address, expiry_time, 'active', datetime.now(), expiry_time))
 
@@ -629,6 +656,7 @@ def mpesa_callback():
     conn = None
     cursor = None
     try:
+        logging.info("Connecting to database for M-Pesa callback.")
         conn = get_db_connection()
         if conn is None:
             logging.error("Failed to connect to DB for M-Pesa callback. Cannot process transaction.")
@@ -639,11 +667,13 @@ def mpesa_callback():
         checkout_request_id = data['Body']['stkCallback']['CheckoutRequestID']
 
         if result_code == 0:
-            cursor.execute("SELECT amount, mac_address, phone_number FROM payments WHERE transaction_id = %s", (checkout_request_id,))
+            cursor.execute("SELECT amount, mac_address, phone_number FROM payments WHERE transaction_id = %s",
+                           (checkout_request_id,))
             payment = cursor.fetchone()
 
             if not payment:
-                logging.error(f"Callback error: Payment with transaction_id {checkout_request_id} not found in database.")
+                logging.error(
+                    f"Callback error: Payment with transaction_id {checkout_request_id} not found in database.")
                 return jsonify({'message': 'Payment not found'}), 404
 
             mac_address = payment['mac_address']
@@ -695,8 +725,10 @@ def connect_with_code():
 
     mac_address = get_mac_from_ip(ip_address)
     if not mac_address:
-        return jsonify({'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
+        return jsonify(
+            {'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
 
+    logging.info("Connecting to database to validate connection code.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'success': False, 'message': 'Database connection failed.'}), 500
@@ -757,6 +789,7 @@ def admin_login():
         logging.warning("Admin login failed: Missing username or password.")
         return jsonify({'success': False, 'message': 'Username and password are required.'}), 400
 
+    logging.info(f"Connecting to database to authenticate admin '{username}'.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'success': False, 'message': 'Database connection failed.'}), 500
@@ -796,7 +829,8 @@ def check_mikrotik_status(current_user):
             api_pool.disconnect()
             return jsonify({"status": "connected", "message": "Successfully connected to MikroTik."}), 200
         else:
-            return jsonify({"status": "disconnected", "message": "Failed to connect to MikroTik. Check credentials and network."}), 503
+            return jsonify({"status": "disconnected",
+                            "message": "Failed to connect to MikroTik. Check credentials and network."}), 503
     except Exception as e:
         logging.error(f"Error checking MikroTik status: {e}")
         return jsonify({"status": "disconnected", "message": f"An error occurred: {e}"}), 500
@@ -806,6 +840,7 @@ def check_mikrotik_status(current_user):
 @token_required
 def get_users(current_user):
     """Returns a list of all active and expired users from the database."""
+    logging.info(f"Admin '{current_user.get('user')}' requested a list of all users.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'message': 'Database unavailable.'}), 503
@@ -815,6 +850,8 @@ def get_users(current_user):
         query = "SELECT mac_address, expiry, status, created_at FROM users"
         cursor.execute(query)
         users = cursor.fetchall()
+
+        logging.info("Fetching active users from MikroTik for comparison.")
         mikrotik_active_users = get_mikrotik_active_users()
         mikrotik_macs = {user['mac_address'] for user in mikrotik_active_users}
 
@@ -841,6 +878,7 @@ def clear_user(current_user, mac_address):
     if not mac_address:
         return jsonify({'message': 'MAC address is required.'}), 400
 
+    logging.info(f"Admin '{current_user.get('user')}' attempting to clear user '{mac_address}'.")
     success_db = False
     conn = get_db_connection()
     if conn:
@@ -850,6 +888,7 @@ def clear_user(current_user, mac_address):
             cursor.execute(sql, (mac_address,))
             conn.commit()
             success_db = cursor.rowcount > 0
+            logging.info(f"Database user '{mac_address}' delete result: {'Success' if success_db else 'Not found'}.")
         except Exception as e:
             logging.error(f"Error deleting user {mac_address} from database: {e}")
         finally:
@@ -860,7 +899,8 @@ def clear_user(current_user, mac_address):
     success_mikrotik = remove_user_from_hotspot(mac_address)
 
     if success_db or success_mikrotik:
-        logging.info(f"Admin '{current_user.get('user')}' cleared user with MAC {mac_address}. DB success: {success_db}, MikroTik success: {success_mikrotik}.")
+        logging.info(
+            f"Admin '{current_user.get('user')}' cleared user with MAC {mac_address}. DB success: {success_db}, MikroTik success: {success_mikrotik}.")
         return jsonify({'message': f'User {mac_address} cleared successfully.'}), 200
     else:
         logging.warning(f"Admin '{current_user.get('user')}' failed to clear user with MAC {mac_address}.")
@@ -874,6 +914,8 @@ def generate_codes(current_user):
     data = request.get_json()
     count = data.get('count', 1)
     codes_generated = []
+
+    logging.info(f"Admin '{current_user.get('user')}' requesting to generate {count} codes.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'message': 'Database unavailable.'}), 503
@@ -903,6 +945,7 @@ def generate_codes(current_user):
 @token_required
 def get_codes(current_user):
     """Returns a list of all generated codes."""
+    logging.info(f"Admin '{current_user.get('user')}' requesting a list of all codes.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'message': 'Database unavailable.'}), 503
@@ -950,7 +993,8 @@ def update_credentials(current_user):
                        (new_username, hashed_password, current_user['user']))
         conn.commit()
         logging.info(f"Admin '{current_user['user']}' successfully updated credentials to '{new_username}'.")
-        return jsonify({'success': True, 'message': 'Credentials updated successfully. Please log in with the new credentials.'})
+        return jsonify(
+            {'success': True, 'message': 'Credentials updated successfully. Please log in with the new credentials.'})
     except Exception as e:
         logging.error(f"Error updating credentials for admin '{current_user['user']}': {e}")
         conn.rollback()
@@ -1009,7 +1053,7 @@ def get_mikrotik_users_endpoint(current_user):
     """Fetches the list of active users from the MikroTik router."""
     logging.info(f"Admin '{current_user['user']}' requested active MikroTik users.")
     users = get_mikrotik_active_users()
-    if users is None: # Check if the connection failed
+    if users is None:
         return jsonify({'success': False, 'message': 'Failed to connect to MikroTik.'}), 503
     return jsonify({'success': True, 'users': users})
 
