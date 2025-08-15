@@ -421,6 +421,7 @@ def amount_to_hours(amount):
 @app.route('/')
 def serve_index():
     """Serves the main HTML landing page."""
+    # Assuming 'index.html' is present in a 'templates' folder.
     return render_template('index.html')
 
 
@@ -428,16 +429,11 @@ def serve_index():
 def check_mac_subscription():
     """Checks if a given MAC address has an active subscription."""
     data = request.get_json()
-    ip_address = data.get('ip_address')
-    logging.info(f"Request to check subscription for IP: {ip_address}")
+    mac_address = data.get('mac_address')
+    logging.info(f"Request to check subscription for MAC: {mac_address}")
 
-    if not ip_address:
-        return jsonify({'success': False, 'message': 'IP address is required'}), 400
-
-    mac_address = get_mac_from_ip(ip_address)
     if not mac_address:
-        return jsonify(
-            {'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
+        return jsonify({'success': False, 'message': 'MAC address is required'}), 400
 
     conn = get_db_connection()
     if conn is None:
@@ -476,35 +472,18 @@ def initiate_payment():
     data = request.get_json()
     phone_number = data.get('phone_number')
     amount = data.get('amount')
-    mac_address_from_request = data.get('mac_address')
-    logging.info(
-        f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address_from_request}")
+    mac_address = data.get('mac_address')
+    logging.info(f"Request to initiate payment for phone: {phone_number}, amount: {amount}, mac: {mac_address}")
 
-    if not all([phone_number, amount, mac_address_from_request]):
+    if not all([phone_number, amount, mac_address]):
         logging.warning("Missing data for payment initiation.")
         return jsonify({'success': False, 'message': 'Missing data'}), 400
-
-    client_ip = request.remote_addr
-    mac_address_from_mikrotik = get_mac_from_ip(client_ip)
-
-    if not mac_address_from_mikrotik:
-        logging.warning(f"Could not get MAC address from MikroTik for IP {client_ip}.")
-        return jsonify({'success': False,
-                        'message': 'Could not verify your device. Please ensure you are connected to the hotspot.'}), 400
-
-    if mac_address_from_request != mac_address_from_mikrotik:
-        logging.error(
-            f"MAC address mismatch! Request: {mac_address_from_request}, MikroTik: {mac_address_from_mikrotik}")
-        return jsonify({'success': False, 'message': 'Invalid MAC address. Please try again.'}), 400
-
-    mac_address = mac_address_from_mikrotik
 
     logging.info("Checking for an existing subscription before processing payment.")
     conn = get_db_connection()
     if conn is None:
         logging.error("Database connection failed. Cannot proceed with payment.")
-        return jsonify(
-            {'success': False, 'message': 'Cannot process payment at this time. Please try again later.'}), 503
+        return jsonify({'success': False, 'message': 'Cannot process payment at this time. Please try again later.'}), 503
 
     try:
         cursor = conn.cursor(dictionary=True)
@@ -546,7 +525,7 @@ def initiate_payment():
         "PartyB": MPESA_BUSINESS_SHORTCODE,
         "PhoneNumber": phone_number,
         "CallBackURL": MPESA_CALLBACK_URL,
-        "AccountReference": "Hotspot Subscription",
+        "AccountReference": mac_address,  # MAC address is used as the account reference
         "TransactionDesc": f"Payment for {amount_to_hours(amount)} hour hotspot access"
     }
 
@@ -627,11 +606,12 @@ def background_activate_user(checkout_request_id, amount, mac_address, phone_num
         conn.commit()
         logging.info(f"Database updated for MAC: {mac_address}. Expiry set to {expiry_time}.")
 
-        success = add_user_to_hotspot(phone_number, mac_address, plan_hours)
+        # The add_user_to_hotspot function is now called with mac_address and plan_hours
+        success = add_user_to_hotspot(mac_address, plan_hours)
         if success:
-            logging.info(f"User {phone_number} successfully added/updated on MikroTik hotspot.")
+            logging.info(f"User {mac_address} successfully added/updated on MikroTik hotspot.")
         else:
-            logging.error(f"Failed to add/update user {phone_number} on MikroTik.")
+            logging.error(f"Failed to add/update user {mac_address} on MikroTik.")
     except Exception as e:
         logging.error(f"Error in background worker for transaction {checkout_request_id}: {e}")
         if conn and conn.is_connected():
@@ -680,6 +660,7 @@ def mpesa_callback():
             phone_number = payment['phone_number']
             amount = payment['amount']
 
+            # Start a new thread to process the payment and activate the user.
             thread = threading.Thread(
                 target=background_activate_user,
                 args=(checkout_request_id, amount, mac_address, phone_number)
@@ -716,19 +697,13 @@ def connect_with_code():
     """Connects a user to the hotspot using a pre-generated 6-digit code."""
     data = request.get_json()
     code = data.get('code')
-    ip_address = request.remote_addr
+    mac_address = data.get('mac_address')  # MAC address is now passed directly
 
-    logging.info(f"Request to connect with code '{code}' for IP: {ip_address}")
-    if not all([code, ip_address]):
+    logging.info(f"Request to connect with code '{code}' for MAC: {mac_address}")
+    if not all([code, mac_address]):
         logging.warning("Missing data for code connection.")
-        return jsonify({'success': False, 'message': 'Missing code or IP address'}), 400
+        return jsonify({'success': False, 'message': 'Missing code or MAC address'}), 400
 
-    mac_address = get_mac_from_ip(ip_address)
-    if not mac_address:
-        return jsonify(
-            {'success': False, 'message': 'Could not get MAC address from MikroTik. Are you connected?'}), 400
-
-    logging.info("Connecting to database to validate connection code.")
     conn = get_db_connection()
     if conn is None:
         return jsonify({'success': False, 'message': 'Database connection failed.'}), 500
@@ -758,7 +733,8 @@ def connect_with_code():
         cursor.execute(sql, val)
         conn.commit()
 
-        if add_user_to_hotspot(code, mac_address, time_left):
+        # Update MikroTik using the MAC address
+        if add_user_to_hotspot(mac_address, time_left):
             logging.info(f"Successfully connected MAC: {mac_address} with code '{code}'.")
             return jsonify({'success': True, 'message': f'Welcome! You are now connected with code {code}.'})
         else:
